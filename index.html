@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VEYORA TRAVEL — Travel Beyond Ordinary</title>
+<style>
+:root{--navy:#062d37;--gold:#e3c17a;--cream:#f7f2e8;--ink:#163138;--muted:#6f7e81;--green:#0f7668}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;color:var(--ink);background:#f7faf9}
+header{background:var(--navy);color:#fff;padding:18px 5vw;display:flex;justify-content:space-between;align-items:center}
+.logo{font-family:Georgia,serif;letter-spacing:.18em;font-size:24px}.logo small{display:block;font:8px Arial;letter-spacing:.5em;text-align:center}
+.hero{min-height:420px;padding:80px 5vw;color:#fff;background:linear-gradient(90deg,rgba(6,45,55,.82),rgba(6,45,55,.25)),url('https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=1800&q=85') center/cover}
+.hero h1{font-family:Georgia,serif;font-size:60px;max-width:800px;margin:0 0 15px}.hero p{max-width:650px;font-size:18px}
+.wrap{max-width:1150px;margin:-50px auto 60px;padding:0 20px}.card{background:#fff;border-radius:18px;padding:22px;box-shadow:0 15px 50px rgba(0,0,0,.09);margin-bottom:18px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}input,select,textarea,button{font:inherit}
+input,select,textarea{width:100%;padding:12px;border:1px solid #dce4e2;border-radius:10px}
+button{border:0;border-radius:999px;padding:12px 18px;background:var(--navy);color:#fff;font-weight:700;cursor:pointer}
+.total{font-size:38px;font-weight:800;color:var(--green)}.muted{color:var(--muted);font-size:13px}.success{color:var(--green);font-weight:700}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.hero h1{font-size:44px}}
+</style></head>
+<body>
+<header><div class="logo">VEYORA<small>TRAVEL</small></div><a href="/admin.html" style="color:white">Admin</a></header>
+<section class="hero"><h1>Travel Beyond Ordinary.</h1><p>Build your own multi-city journey. Choose destinations, nights, cabin and hotel level, then see an estimated package price.</p></section>
+<div class="wrap">
+<div class="card">
+<h2>Build Your Journey</h2>
+<div class="grid">
+<input id="departureCity" value="New York (JFK)" placeholder="Departure city">
+<input id="departureDate" type="date">
+<input id="customerName" placeholder="Full name">
+<input id="email" placeholder="Email">
+<input id="phone" placeholder="Phone / WhatsApp">
+<select id="travelers"><option>1</option><option selected>2</option><option>3</option><option>4</option></select>
+<select id="flightClass"><option value="economy">Economy</option><option value="premium">Premium Economy</option><option value="business">Business</option><option value="none">No flights</option></select>
+<select id="hotelLevel"><option value="4star">4★ Premium</option><option value="5star">5★ Luxury</option><option value="boutique">Boutique</option><option value="ultra">Ultra Luxury</option></select>
+</div>
+</div>
+<div class="card">
+<h3>Destinations</h3>
+<div class="grid">
+<input id="city1" value="Rome, Italy"><input id="nights1" type="number" value="3" min="1">
+<input id="city2" value="Lucerne, Switzerland"><input id="nights2" type="number" value="3" min="1">
+<input id="city3" value="Paris, France"><input id="nights3" type="number" value="3" min="1">
+</div>
+</div>
+<div class="card">
+<h3>Extras</h3>
+<label><input type="checkbox" class="extra" value="airport"> Private airport transfers</label><br>
+<label><input type="checkbox" class="extra" value="rail"> Intercity rail / ground</label><br>
+<label><input type="checkbox" class="extra" value="citytour"> Private city highlights</label><br>
+<label><input type="checkbox" class="extra" value="concierge"> VEYORA concierge</label>
+</div>
+<div class="card">
+<button id="calc">Calculate Package Price</button>
+<div class="total" id="total">$0</div>
+<div class="muted" id="breakdown"></div>
+</div>
+<div class="card">
+<textarea id="notes" rows="4" placeholder="Special requests"></textarea><br><br>
+<button id="submit">Submit Booking Request</button>
+<p id="status"></p>
+</div>
+</div>
+<script>
+const SUPABASE_URL='https://neckklsrofckomgmbcjg.supabase.co';
+let latestQuote=null;
+const cities=()=>[1,2,3].map(i=>({city:document.getElementById('city'+i).value,nights:+document.getElementById('nights'+i).value})).filter(x=>x.city);
+const extras=()=>[...document.querySelectorAll('.extra:checked')].map(x=>x.value);
+
+function localQuote(){
+ const t=+travelers.value; const n=cities().reduce((s,c)=>s+c.nights,0);
+ const fp={economy:780,premium:1290,business:3450,none:0}[flightClass.value];
+ const hp={'4star':190,'5star':340,boutique:285,ultra:720}[hotelLevel.value];
+ const ex={airport:220,rail:260,citytour:180,concierge:240};
+ const flight=fp*t, hotel=hp*n*t;
+ const extrasTotal=extras().reduce((s,k)=>s+(ex[k]||0)*t,0);
+ const subtotal=flight+hotel+extrasTotal;
+ const markup=subtotal*.12+95;
+ return {currency:'USD',breakdown:{flight,hotel,extras:extrasTotal,markup,total:subtotal+markup},perPerson:(subtotal+markup)/t,nights:n};
+}
+calc.onclick=()=>{latestQuote=localQuote();total.textContent='$'+Math.round(latestQuote.breakdown.total).toLocaleString();breakdown.textContent=`Flights $${Math.round(latestQuote.breakdown.flight).toLocaleString()} • Hotels $${Math.round(latestQuote.breakdown.hotel).toLocaleString()} • Extras $${Math.round(latestQuote.breakdown.extras).toLocaleString()} • VEYORA fee/markup $${Math.round(latestQuote.breakdown.markup).toLocaleString()} • $${Math.round(latestQuote.perPerson).toLocaleString()} per person`;};
+
+submit.onclick=async()=>{ if(!latestQuote) calc.click(); status.textContent='Sending...';
+ const r=await fetch(SUPABASE_URL+'/functions/v1/submit-booking',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+  customerName:customerName.value,email:email.value,phone:phone.value,departureCity:departureCity.value,departureDate:departureDate.value,
+  travelers:+travelers.value,cities:cities(),flightClass:flightClass.value,hotelLevel:hotelLevel.value,extras:extras(),notes:notes.value,quote:latestQuote
+ })});
+ const d=await r.json(); status.className=r.ok?'success':''; status.textContent=r.ok?'Booking request sent to VEYORA Admin.':(d.error||'Request failed');
+};
+</script>
+</body></html>
