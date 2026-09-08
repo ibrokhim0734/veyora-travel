@@ -5,7 +5,12 @@ module.exports=async(req,res)=>{
   const auth=req.headers.authorization||'';
   if(!auth.startsWith('Bearer ')) return res.status(401).json({error:'Unauthorized'});
   try{
-    const qs=req.method==='GET'&&req.query?.id?`?id=${encodeURIComponent(req.query.id)}`:'';
+    const params=new URLSearchParams();
+    if(req.method==='GET'){
+      if(req.query?.id) params.set('id',String(req.query.id));
+      if(req.query?.view) params.set('view',String(req.query.view));
+    }
+    const qs=params.toString()?`?${params.toString()}`:'';
     const r=await fetch(U+'/functions/v1/admin-bookings'+qs,{method:req.method,headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':auth},body:req.method==='PATCH'?JSON.stringify(req.body||{}):undefined});
     const text=await r.text(); let data={}; try{data=text?JSON.parse(text):{}}catch{data={error:text||'Invalid response'}}
     return res.status(r.status).json(data);
