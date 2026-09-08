@@ -11,6 +11,14 @@ async function getPricing(){
   }
 }
 
+async function logSearch(payload){
+  try{
+    await fetch(SUPABASE+'/functions/v1/log-supplier-search',{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
+    });
+  }catch{}
+}
+
 async function liveFlight(seg,adults){
   const path=`/v2/shopping/flight-offers?originLocationCode=${encodeURIComponent(seg.origin)}&destinationLocationCode=${encodeURIComponent(seg.destination)}&departureDate=${encodeURIComponent(seg.date)}&adults=${adults}&currencyCode=USD&max=3`;
   const d=await amadeus(path);
@@ -97,22 +105,33 @@ module.exports=async(req,res)=>{
     const hotelSell=hotelNet*(1+hm);
     const total=flightSell+hotelSell+fee;
     const markup=(flightSell-flightNet)+(hotelSell-hotelNet)+fee;
+    const provider=mode==='live'?'Amadeus':'Mixed/Demo inventory';
+    const quoteExpiresAt=new Date(Date.now()+15*60*1000).toISOString();
 
     const alternatives={
       flights:flightChoices.map((choices,i)=>({segment:i,choices:choices.slice(0,3)})),
       hotels:hotelChoices.map((choices,i)=>({stay:i,choices:choices.slice(0,3)}))
     };
 
-    res.status(200).json({
+    const response={
       mode,
-      provider:mode==='live'?'Amadeus':'Mixed/Demo inventory',
+      provider,
       pricing:{flightMarkupPercent:fm*100,hotelMarkupPercent:hm*100,serviceFee:fee},
       itinerary:{segments,stays},
       selected:{flights:selectedFlights,hotels:selectedHotels},
       alternatives,
       totals:{flightNet,hotelNet,netCost:flightNet+hotelNet,markup,total,perPerson:total/adults,currency:'USD'},
-      quoteExpiresAt:new Date(Date.now()+15*60*1000).toISOString()
+      quoteExpiresAt
+    };
+
+    await logSearch({
+      adults,segments,stays,provider,mode,
+      flightCount:flightChoices.reduce((s,x)=>s+x.length,0),
+      hotelCount:hotelChoices.reduce((s,x)=>s+x.length,0),
+      total,perPerson:total/adults
     });
+
+    res.status(200).json(response);
   }catch(e){
     res.status(500).json({error:e.message||'Multi-city search failed'});
   }
