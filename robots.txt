@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /payments.html
+Disallow: /operations.html
+Disallow: /analytics.html
+Disallow: /support.html
+Disallow: /api/
+
+Sitemap: https://veyora-travel-2zhfqn4sc2-9202.vercel.app/sitemap.xml
