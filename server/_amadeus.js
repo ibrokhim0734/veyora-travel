@@ -1,3 +1,4 @@
+// Shared Amadeus helper moved outside /api so Vercel does not count it as a Function.
 const HOST=process.env.AMADEUS_HOST||'https://test.api.amadeus.com';
 let cache={token:null,expires:0};
 async function token(){

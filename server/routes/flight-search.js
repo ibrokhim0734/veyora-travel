@@ -1,4 +1,4 @@
-const {amadeus,demoFlights}=require('./_amadeus');
+const {amadeus,demoFlights}=require('../_amadeus');
 module.exports=async(req,res)=>{
  try{
   const q=req.method==='GET'?req.query:req.body||{};
@@ -13,8 +13,8 @@ module.exports=async(req,res)=>{
   let results,mode='live';
   try{
    const d=await amadeus('/v2/shopping/flight-offers?'+params.toString());
-   if(!d){mode='demo';results=demoFlights(origin,destination,departureDate,adults+children);}else results=(d.data||[]).map(x=>{const its=x.itineraries||[],out=its[0]?.segments||[],back=its[1]?.segments||[];return {id:x.id,carrier:x.validatingAirlineCodes?.[0]||out[0]?.carrierCode||'Airline',origin,destination,departure:out[0]?.departure?.at,arrival:out.slice(-1)[0]?.arrival?.at,returnDeparture:back[0]?.departure?.at||null,returnArrival:back.slice(-1)[0]?.arrival?.at||null,stops:Math.max(0,out.length-1),returnStops:back.length?Math.max(0,back.length-1):null,price:Number(x.price?.grandTotal||0),currency:x.price?.currency||'USD',cabin:out[0]?.travelerPricings?.[0]?.fareDetailsBySegment?.[0]?.cabin||cabin,lastTicketingDate:x.lastTicketingDate||null,seats:x.numberOfBookableSeats||null,mode:'live',offer:x};});
+   if(!d){mode='demo';results=demoFlights(origin,destination,departureDate,adults+children);}else results=(d.data||[]).map(x=>{const its=x.itineraries||[],out=its[0]?.segments||[],back=its[1]?.segments||[];return {id:x.id,carrier:x.validatingAirlineCodes?.[0]||out[0]?.carrierCode||'Airline',origin,destination,departure:out[0]?.departure?.at,arrival:out.slice(-1)[0]?.arrival?.at,returnDeparture:back[0]?.departure?.at||null,returnArrival:back.slice(-1)[0]?.arrival?.at||null,stops:Math.max(0,out.length-1),returnStops:back.length?Math.max(0,back.length-1):null,price:Number(x.price?.grandTotal||0),currency:x.price?.currency||'USD',cabin,lastTicketingDate:x.lastTicketingDate||null,seats:x.numberOfBookableSeats||null,mode:'live',offer:x};});
   }catch(e){mode='demo';results=demoFlights(origin,destination,departureDate,adults+children).map(x=>({...x,returnDate:returnDate||null,cabin}));}
-  res.status(200).json({mode,provider:mode==='live'?'Amadeus':'Demo inventory',tripType:returnDate?'round_trip':'one_way',search:{origin,destination,departureDate,returnDate: returnDate||null,adults,children,cabin},results});
+  res.status(200).json({mode,provider:mode==='live'?'Amadeus':'Demo inventory',tripType:returnDate?'round_trip':'one_way',search:{origin,destination,departureDate,returnDate:returnDate||null,adults,children,cabin},results});
  }catch(e){res.status(500).json({error:e.message||'Flight search failed'});}
 };
