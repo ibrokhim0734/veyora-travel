@@ -41,3 +41,4 @@ module.exports=async(req,res)=>{
     timestamp:new Date().toISOString()
   });
 };
+// Git deployment trigger: 2026-09-15
