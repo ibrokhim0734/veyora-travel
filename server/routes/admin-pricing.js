@@ -1,10 +1,9 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": { "api/router.js": { "maxDuration": 30 } },
-  "rewrites": [{ "source": "/api/:route", "destination": "/api/router?route=:route" }],
-  "headers": [{ "source": "/(.*)", "headers": [
-    { "key": "X-Content-Type-Options", "value": "nosniff" },
-    { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-    { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
-  ]}]
-}
+const U=process.env.SUPABASE_URL||'https://neckklsrofckomgmbcjg.supabase.co';
+const KEY=process.env.SUPABASE_ANON_KEY||'sb_publishable_HJRQj67rIV6vGlYT2fb8Qw_Yj7OtXSn';
+module.exports=async(req,res)=>{
+ try{
+  const auth=req.headers.authorization||'';
+  const r=await fetch(U+'/functions/v1/admin-pricing',{method:req.method,headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':auth},body:['GET','HEAD'].includes(req.method)?undefined:JSON.stringify(req.body||{})});
+  const text=await r.text(); res.status(r.status).setHeader('Content-Type','application/json').send(text);
+ }catch(e){res.status(500).json({error:e.message||'Pricing proxy failed'});}
+};
