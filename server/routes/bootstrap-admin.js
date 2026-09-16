@@ -1,6 +1,9 @@
-{
-  "$schema":"https://openapi.vercel.sh/vercel.json",
-  "functions":{"api/router.js":{"maxDuration":30}},
-  "rewrites":[{"source":"/api/:route","destination":"/api/router?route=:route"}],
-  "headers":[{"source":"/(.*)","headers":[{"key":"X-Content-Type-Options","value":"nosniff"},{"key":"X-Frame-Options","value":"SAMEORIGIN"},{"key":"Referrer-Policy","value":"strict-origin-when-cross-origin"}]}]
-}
+const U=process.env.SUPABASE_URL||'https://neckklsrofckomgmbcjg.supabase.co';
+module.exports=async(req,res)=>{
+  if(req.method!=='POST') return res.status(405).json({error:'Method not allowed'});
+  try{
+    const r=await fetch(U+'/functions/v1/bootstrap-admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req.body||{})});
+    const text=await r.text(); let data={}; try{data=text?JSON.parse(text):{}}catch{data={error:text||'Invalid response'}}
+    return res.status(r.status).json(data);
+  }catch(e){return res.status(500).json({error:'Admin setup service unavailable'});}
+};
