@@ -1,10 +1,10 @@
-const path = require('path');
-module.exports = async (req, res) => {
-  const raw = (req.query && req.query.route) || '';
-  const route = Array.isArray(raw) ? raw.join('/') : String(raw);
-  const name = route.replace(/^\/+|\/+$/g, '');
-  const allowed = new Set(['admin-bookings','admin-login','admin-pricing','admin-support','booking-notification','booking-status','bootstrap-admin','cart-preflight','cart-to-booking','contact-message','create-payment-session','experience-search','flight-search','hotel-search','location-search','multi-city-search','package-search','provider-status','request-cancellation','submit-booking','supplier-adapter-status','supplier-amadeus-flight','supplier-fulfillment','supplier-orchestrator','transfer-search','trip-cart']);
-  if (!allowed.has(name)) return res.status(404).json({error:'API route not found'});
-  try { const handler=require(path.join(process.cwd(),'server','routes',name+'.js')); return await handler(req,res); }
-  catch(e){ console.error('API router error',name,e); return res.status(500).json({error:'Internal API error'}); }
+const U=process.env.SUPABASE_URL||'https://neckklsrofckomgmbcjg.supabase.co';
+const KEY=process.env.SUPABASE_ANON_KEY||'sb_publishable_HJRQj67rIV6vGlYT2fb8Qw_Yj7OtXSn';
+module.exports=async(req,res)=>{
+  if(req.method!=='POST') return res.status(405).json({error:'Method not allowed'});
+  try{
+    const r=await fetch(U+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'Content-Type':'application/json','apikey':KEY},body:JSON.stringify(req.body||{})});
+    const text=await r.text(); let data={}; try{data=text?JSON.parse(text):{}}catch{data={error:text||'Invalid response'}}
+    return res.status(r.status).json(data);
+  }catch(e){return res.status(500).json({error:'Login service unavailable'});}
 };
