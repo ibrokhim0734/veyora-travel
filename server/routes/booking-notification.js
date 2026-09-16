@@ -1,2 +1,3 @@
-// consolidated API router
-module.exports = require('../server/router.js');
+const U=process.env.SUPABASE_URL||'https://neckklsrofckomgmbcjg.supabase.co';
+const KEY=process.env.SUPABASE_ANON_KEY||'sb_publishable_HJRQj67rIV6vGlYT2fb8Qw_Yj7OtXSn';
+module.exports=async(req,res)=>{try{if(req.method!=='POST')return res.status(405).json({error:'POST required'});const auth=req.headers.authorization||'';if(!auth.startsWith('Bearer '))return res.status(401).json({error:'Admin authorization required'});const {bookingId,event='confirmation'}=req.body||{};if(!Number(bookingId))return res.status(400).json({error:'bookingId required'});const normalizedEvent=event==='travel_ready'?'fulfillment_ready':event;const r=await fetch(`${U}/functions/v1/booking-notification`,{method:'POST',headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':auth},body:JSON.stringify({bookingId:Number(bookingId),event:normalizedEvent})});const text=await r.text();let d={};try{d=text?JSON.parse(text):{}}catch{d={error:text||'Invalid notification response'}}return res.status(r.status).json(d)}catch(e){return res.status(500).json({error:e.message||'Booking notification failed'})}};
