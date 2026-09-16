@@ -1,1 +1,9 @@
-const path=require('path');const allowed=new Set(['admin-bookings','admin-login','admin-pricing','admin-support','booking-notification','booking-status','bootstrap-admin','cart-preflight','cart-to-booking','contact-message','create-payment-session','experience-search','flight-search','hotel-search','location-search','multi-city-search','package-search','provider-status','request-cancellation','submit-booking','supplier-adapter-status','supplier-amadeus-flight','supplier-fulfillment','supplier-orchestrator','transfer-search','trip-cart']);module.exports=async(req,res)=>{const raw=req.query?.route||'';const name=(Array.isArray(raw)?raw.join('/'):String(raw)).replace(/^\/+|\/+$/g,'');if(!allowed.has(name))return res.status(404).json({error:'API route not found'});try{return await require(path.join(process.cwd(),'server','routes',name+'.js'))(req,res)}catch(e){console.error('API router error',name,e);return res.status(500).json({error:'Internal API error'})}};
+const U=process.env.SUPABASE_URL||'https://neckklsrofckomgmbcjg.supabase.co';
+module.exports=async(req,res)=>{
+ if(req.method!=='POST') return res.status(405).json({error:'Method not allowed'});
+ try{
+  const r=await fetch(U+'/functions/v1/contact-message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req.body||{})});
+  const text=await r.text(); let data={}; try{data=text?JSON.parse(text):{}}catch{data={error:text||'Invalid response'}}
+  return res.status(r.status).json(data);
+ }catch(e){return res.status(500).json({error:'Contact service unavailable'});}
+};
