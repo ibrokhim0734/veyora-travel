@@ -1,4 +1,4 @@
-const U='https://neckklsrofckomgmbcjg.supabase.co';
+const U=process.env.SUPABASE_URL||'https://neckklsrofckomgmbcjg.supabase.co';
 module.exports=async(req,res)=>{
  if(req.method!=='POST') return res.status(405).json({error:'Method not allowed'});
  try{
