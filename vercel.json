@@ -4,7 +4,32 @@
     "api/router.js": { "maxDuration": 30 }
   },
   "rewrites": [
-    { "source": "/api/:route", "destination": "/api/router?route=:route" }
+    { "source": "/api/admin-bookings", "destination": "/api/router?route=admin-bookings" },
+    { "source": "/api/admin-login", "destination": "/api/router?route=admin-login" },
+    { "source": "/api/admin-pricing", "destination": "/api/router?route=admin-pricing" },
+    { "source": "/api/admin-support", "destination": "/api/router?route=admin-support" },
+    { "source": "/api/booking-notification", "destination": "/api/router?route=booking-notification" },
+    { "source": "/api/booking-status", "destination": "/api/router?route=booking-status" },
+    { "source": "/api/bootstrap-admin", "destination": "/api/router?route=bootstrap-admin" },
+    { "source": "/api/cart-preflight", "destination": "/api/router?route=cart-preflight" },
+    { "source": "/api/cart-to-booking", "destination": "/api/router?route=cart-to-booking" },
+    { "source": "/api/contact-message", "destination": "/api/router?route=contact-message" },
+    { "source": "/api/create-payment-session", "destination": "/api/router?route=create-payment-session" },
+    { "source": "/api/experience-search", "destination": "/api/router?route=experience-search" },
+    { "source": "/api/flight-search", "destination": "/api/router?route=flight-search" },
+    { "source": "/api/hotel-search", "destination": "/api/router?route=hotel-search" },
+    { "source": "/api/location-search", "destination": "/api/router?route=location-search" },
+    { "source": "/api/multi-city-search", "destination": "/api/router?route=multi-city-search" },
+    { "source": "/api/package-search", "destination": "/api/router?route=package-search" },
+    { "source": "/api/provider-status", "destination": "/api/router?route=provider-status" },
+    { "source": "/api/request-cancellation", "destination": "/api/router?route=request-cancellation" },
+    { "source": "/api/submit-booking", "destination": "/api/router?route=submit-booking" },
+    { "source": "/api/supplier-adapter-status", "destination": "/api/router?route=supplier-adapter-status" },
+    { "source": "/api/supplier-amadeus-flight", "destination": "/api/router?route=supplier-amadeus-flight" },
+    { "source": "/api/supplier-fulfillment", "destination": "/api/router?route=supplier-fulfillment" },
+    { "source": "/api/supplier-orchestrator", "destination": "/api/router?route=supplier-orchestrator" },
+    { "source": "/api/transfer-search", "destination": "/api/router?route=transfer-search" },
+    { "source": "/api/trip-cart", "destination": "/api/router?route=trip-cart" }
   ],
   "headers": [
     {
