@@ -1,8 +1,8 @@
 name: Deploy VEYORA to Vercel
 
+# Production deploys are handled by the Vercel Git integration on pushes to main.
+# Keep this workflow only as an optional manual CLI deployment path.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -28,7 +28,7 @@ jobs:
             fi
           done
           if [ "$missing" -ne 0 ]; then
-            echo "Open GitHub → Settings → Secrets and variables → Actions and add the missing Vercel values."
+            echo "Configure the missing Vercel GitHub Actions secrets before using this manual deployment workflow."
             exit 1
           fi
 
