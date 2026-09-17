@@ -7,7 +7,7 @@ module.exports = async (req, res) => {
   if (!name || !/^[a-z0-9-]+$/i.test(name)) return res.status(404).json({ error: 'API route not found' });
   const allowed = new Set([
     'admin-bookings','admin-login','admin-pricing','admin-support','booking-notification','booking-status','bootstrap-admin',
-    'cart-preflight','cart-to-booking','contact-message','create-payment-session','experience-search','flight-search','hotel-search',
+    'cart-preflight','cart-to-booking','contact-message','create-payment-session','experience-search','flight-search','fulfillment-retry','hotel-search',
     'location-search','multi-city-search','package-search','provider-status','request-cancellation','submit-booking','supplier-adapter-status',
     'supplier-amadeus-flight','supplier-fulfillment','supplier-orchestrator','transfer-search','trip-cart'
   ]);
