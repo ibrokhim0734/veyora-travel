@@ -1,8 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": {
-    "api/router.js": { "maxDuration": 30 }
-  },
+  "functions": { "api/router.js": { "maxDuration": 30 } },
   "rewrites": [
     { "source": "/api/admin-bookings", "destination": "/api/router?route=admin-bookings" },
     { "source": "/api/admin-login", "destination": "/api/router?route=admin-login" },
@@ -17,6 +15,7 @@
     { "source": "/api/create-payment-session", "destination": "/api/router?route=create-payment-session" },
     { "source": "/api/experience-search", "destination": "/api/router?route=experience-search" },
     { "source": "/api/flight-search", "destination": "/api/router?route=flight-search" },
+    { "source": "/api/fulfillment-retry", "destination": "/api/router?route=fulfillment-retry" },
     { "source": "/api/hotel-search", "destination": "/api/router?route=hotel-search" },
     { "source": "/api/location-search", "destination": "/api/router?route=location-search" },
     { "source": "/api/multi-city-search", "destination": "/api/router?route=multi-city-search" },
@@ -31,14 +30,5 @@
     { "source": "/api/transfer-search", "destination": "/api/router?route=transfer-search" },
     { "source": "/api/trip-cart", "destination": "/api/router?route=trip-cart" }
   ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
-      ]
-    }
-  ]
+  "headers": [{"source":"/(.*)","headers":[{"key":"X-Content-Type-Options","value":"nosniff"},{"key":"X-Frame-Options","value":"SAMEORIGIN"},{"key":"Referrer-Policy","value":"strict-origin-when-cross-origin"}]}]
 }
