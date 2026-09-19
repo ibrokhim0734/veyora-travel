@@ -10,7 +10,9 @@ module.exports=async(req,res)=>{
     const urlValid=Boolean(url&&validUrl(url));
     adapters[type]={configured:Boolean(urlValid&&key),hasUrl:Boolean(url),urlValid,hasKey:Boolean(key),host:url?(()=>{try{return new URL(url).host}catch{return 'invalid-url'}})():null};
   }
-  const configured=Object.values(adapters).filter(x=>x.configured).length;
+  const configuredTypes=types.filter(type=>adapters[type].configured);
+  const missingTypes=types.filter(type=>!adapters[type].configured);
+  const configured=configuredTypes.length;
   res.setHeader('Cache-Control','no-store');
-  res.status(200).json({configured,total:types.length,ready:configured===types.length,adapters,timestamp:new Date().toISOString()});
+  res.status(200).json({configured,total:types.length,ready:configured===types.length,configuredTypes,missingTypes,flightReady:adapters.flight.configured,packageFulfillmentReady:configured===types.length,adapters,timestamp:new Date().toISOString()});
 };
