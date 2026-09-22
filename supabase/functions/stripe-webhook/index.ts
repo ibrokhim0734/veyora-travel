@@ -1,8 +1,63 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
-const json=(x:any,s=200)=>new Response(JSON.stringify(x),{status:s,headers:{'Content-Type':'application/json'}});function hex(bytes:ArrayBuffer){return [...new Uint8Array(bytes)].map(b=>b.toString(16).padStart(2,'0')).join('')}
-Deno.serve(async(req)=>{if(req.method!=='POST')return json({error:'POST required'},405);try{const secret=Deno.env.get('STRIPE_WEBHOOK_SECRET');if(!secret)return json({error:'Stripe webhook secret not configured'},503);const sig=req.headers.get('stripe-signature')||'',raw=await req.text(),vals:any={};for(const p of sig.split(',')){const i=p.indexOf('=');if(i>0){const k=p.slice(0,i),v=p.slice(i+1);(vals[k]??=[]).push(v)}}const t=vals.t?.[0],sigs=vals.v1||[];if(!t||!sigs.length)return json({error:'Missing Stripe signature'},400);if(!/^\d+$/.test(t)||!Number.isFinite(Number(t))||Math.abs(Date.now()/1000-Number(t))>300)return json({error:'Expired Stripe signature'},400);const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']),mac=hex(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(`${t}.${raw}`)));if(!sigs.some((x:string)=>x===mac))return json({error:'Invalid Stripe signature'},400);const event=JSON.parse(raw),obj=event.data?.object||{},url=Deno.env.get('SUPABASE_URL')!,service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,anon=Deno.env.get('SUPABASE_ANON_KEY')!,db=createClient(url,service);let fulfillment:any=null,notification:any=null;
-if(['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type)){if(obj.payment_status!=='paid')return json({received:true,ignored:true,reason:'Checkout session is not paid'});const bookingId=Number(obj.metadata?.booking_id||0);if(bookingId){const {data:existing}=await db.from('payment_events').select('id').eq('provider_event_id',event.id).maybeSingle();if(!existing){const amount=Number(obj.amount_total||0)/100,currency=String(obj.currency||'usd').toUpperCase(),ptype=String(obj.metadata?.payment_type||'full'),{data:booking,error}=await db.from('bookings').select('id,total_price,amount_paid,status,currency').eq('id',bookingId).single();if(error)throw error;const expectedCurrency=String(booking.currency||'USD').toUpperCase();if(currency!==expectedCurrency)return json({error:'Payment currency does not match booking currency'},409);if(!Number.isFinite(amount)||amount<=0)return json({error:'Invalid paid amount'},400);const total=Number(booking.total_price||0),previousPaid=Number(booking.amount_paid||0),remaining=Math.max(0,total-previousPaid);if(remaining<=0)return json({received:true,ignored:true,reason:'Booking is already fully paid'});if(amount>remaining+0.01)return json({error:'Payment amount exceeds booking balance'},409);const newPaid=Math.min(total,previousPaid+amount),payStatus=newPaid>=total-0.01?'paid':'partially_paid',bookingStatus=payStatus==='paid'?'paid':(['new','contacted','quoted'].includes(String(booking.status))?'awaiting_payment':booking.status);await db.from('bookings').update({amount_paid:newPaid,payment_status:payStatus,payment_type:ptype,payment_provider:'stripe',payment_reference:obj.payment_intent||obj.id,payment_updated_at:new Date().toISOString(),status:bookingStatus,updated_at:new Date().toISOString()}).eq('id',bookingId);await db.from('payment_events').insert({booking_id:bookingId,event_type:'payment_succeeded',provider:'stripe',amount,currency,reference:obj.payment_intent||obj.id,provider_event_id:event.id,payload:{checkoutSessionId:obj.id,paymentType:ptype}});await db.from('booking_events').insert({booking_id:bookingId,event_type:'payment_'+payStatus,payload:{amount,currency,provider:'stripe',paymentType:ptype}});
-try{const nr=await fetch(`${url}/functions/v1/booking-notification`,{method:'POST',headers:{'Content-Type':'application/json','apikey':anon,'Authorization':`Bearer ${service}`},body:JSON.stringify({bookingId,event:'payment'})}),nd=await nr.json().catch(()=>({}));notification={ok:nr.ok,status:nr.status,result:nd}}catch(e){notification={ok:false,error:e instanceof Error?e.message:String(e)}}
-if(payStatus==='paid'){await db.from('booking_components').update({status:'pending',updated_at:new Date().toISOString()}).eq('booking_id',bookingId).eq('status','selected');await db.from('booking_events').insert({booking_id:bookingId,event_type:'supplier_fulfillment_ready',payload:{reason:'full_payment_received',stripeEventId:event.id}});try{const fr=await fetch(`${url}/functions/v1/supplier-orchestrator`,{method:'POST',headers:{'Content-Type':'application/json','apikey':anon,'Authorization':`Bearer ${service}`},body:JSON.stringify({bookingId})}),fd=await fr.json().catch(()=>({}));fulfillment={ok:fr.ok,status:fr.status,result:fd};await db.from('booking_events').insert({booking_id:bookingId,event_type:fr.ok?'supplier_fulfillment_dispatched':'supplier_fulfillment_dispatch_failed',payload:{stripeEventId:event.id,status:fr.status,result:fd}})}catch(e){fulfillment={ok:false,error:e instanceof Error?e.message:String(e)};await db.from('booking_events').insert({booking_id:bookingId,event_type:'supplier_fulfillment_dispatch_failed',payload:{stripeEventId:event.id,error:fulfillment.error}})}}else await db.from('booking_events').insert({booking_id:bookingId,event_type:'deposit_received',payload:{amount,currency}})}}}
-if(event.type==='checkout.session.expired'){const bookingId=Number(obj.metadata?.booking_id||0);if(bookingId){const {data:existing}=await db.from('payment_events').select('id').eq('provider_event_id',event.id).maybeSingle();if(!existing)await db.from('payment_events').insert({booking_id:bookingId,event_type:'checkout_session_expired',provider:'stripe',amount:Number(obj.amount_total||0)/100,currency:String(obj.currency||'usd').toUpperCase(),reference:obj.id,provider_event_id:event.id,payload:{}})}}return json({received:true,notification,fulfillment})}catch(e){console.error(e);return json({error:e instanceof Error?e.message:'Webhook failed'},400)}});
+const json = (body:any,status=200) => new Response(JSON.stringify(body), {status,headers:{'Content-Type':'application/json'}});
+Deno.serve(async (req) => {
+  if(req.method !== 'POST') return json({error:'POST required'},405);
+  try {
+    const secret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+    if(!secret) return json({error:'Stripe webhook secret not configured'},503);
+    const raw = await req.text(), values:Record<string,string[]> = {};
+    for(const part of (req.headers.get('stripe-signature') || '').split(',')) {
+      const index=part.indexOf('=');
+      if(index>0) (values[part.slice(0,index)] ??= []).push(part.slice(index+1));
+    }
+    const timestamp=values.t?.[0];
+    if(!timestamp || !/^\d+$/.test(timestamp) || !Number.isFinite(Number(timestamp)) || Math.abs(Date.now()/1000-Number(timestamp))>300)
+      return json({error:'Expired or missing Stripe signature'},400);
+    const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+    const digest=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(`${timestamp}.${raw}`));
+    const mac=[...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
+    if(!values.v1?.some(value=>value.length===mac.length && [...value].reduce((diff,c,i)=>diff | (c.charCodeAt(0)^mac.charCodeAt(i)),0)===0))
+      return json({error:'Invalid Stripe signature'},400);
+    const event=JSON.parse(raw), session=event.data?.object || {};
+    const success=['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type);
+    if(!success && event.type!=='checkout.session.expired') return json({received:true,ignored:true});
+    if(success && session.payment_status!=='paid') return json({received:true,ignored:true,reason:'Checkout session is not paid'});
+    const bookingId=Number(session.metadata?.booking_id);
+    if(!Number.isSafeInteger(bookingId) || bookingId<=0 || typeof event.id!=='string' || !event.id || typeof session.id!=='string' || !session.id)
+      return json({error:'Invalid booking payment identity'},400);
+    const url=Deno.env.get('SUPABASE_URL')!,service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,anon=Deno.env.get('SUPABASE_ANON_KEY')!;
+    const db=createClient(url,service);
+    if(!success) {
+      const {error}=await db.from('payment_events').insert({booking_id:bookingId,event_type:'checkout_session_expired',provider:'stripe',reference:session.id,provider_event_id:event.id,payload:{}});
+      if(error && error.code!=='23505') throw error;
+      return json({received:true});
+    }
+    if(!Number.isSafeInteger(session.amount_total) || session.amount_total<=0 || typeof session.payment_intent!=='string' || !session.payment_intent)
+      return json({error:'Invalid paid amount or payment intent'},400);
+    const {data:payment,error}=await db.rpc('record_stripe_payment',{
+      p_booking_id:bookingId,p_event_id:event.id,p_reference:session.payment_intent,p_session_id:session.id,
+      p_amount:session.amount_total/100,p_currency:String(session.currency || '').toUpperCase(),p_payment_type:session.metadata?.payment_type || 'full'
+    });
+    if(error) throw error;
+    if(!payment || payment.blocked) return json({received:true,reviewRequired:true});
+    // Retry delivery after an interrupted webhook too. Both receivers own their deduplication.
+    async function dispatch(name:string,body:any) {
+      const response=await fetch(`${url}/functions/v1/${name}`,{method:'POST',redirect:'error',signal:AbortSignal.timeout(25000),
+        headers:{'Content-Type':'application/json',apikey:anon,Authorization:`Bearer ${service}`},body:JSON.stringify(body)});
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok) throw Error(`${name} delivery failed (${response.status})`);
+      return result;
+    }
+    // Start fulfillment before email so a notification outage cannot prevent supplier dispatch.
+    let fulfillment=null;
+    if(payment.payment_status==='paid') fulfillment=await dispatch('supplier-orchestrator',{bookingId});
+    let notification;
+    try { notification=await dispatch('booking-notification',{bookingId,event:'payment'}); }
+    catch { notification={ok:false,reviewRequired:true}; }
+    return json({received:true,duplicate:payment.duplicate,fulfillment,notification});
+  } catch(error) {
+    console.error('Stripe webhook processing failed',error);
+    return json({error:'Payment processing requires retry or operations review'},500);
+  }
+});
 
